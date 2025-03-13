@@ -83,10 +83,10 @@ void f(int&& x) {}
 f(x);  // calls f(int&)
 f(xl); // calls f(int&)
 f(3);  // calls f(int&&)
-f(std::move(x)) // calls f(int&&)
+f(std::move(x)); // calls f(int&&)
 
 f(xr2);           // calls f(int&)
-f(std::move(xr2)) // calls f(int&& x)
+f(std::move(xr2)); // calls f(int&& x)
 ```
 
 See also: [`std::move`](#stdmove), [`std::forward`](#stdforward), [`forwarding references`](#forwarding-references).
@@ -313,7 +313,7 @@ Attributes provide a universal syntax over `__attribute__(...)`, `__declspec`, e
 ```
 
 ### constexpr
-Constant expressions are expressions evaluated by the compiler at compile-time. Only non-complex computations can be carried out in a constant expression. Use the `constexpr` specifier to indicate the variable, function, etc. is a constant expression.
+Constant expressions are expressions that are *possibly* evaluated by the compiler at compile-time. Only non-complex computations can be carried out in a constant expression (these rules are progressively relaxed in later versions). Use the `constexpr` specifier to indicate the variable, function, etc. is a constant expression.
 ```c++
 constexpr int square(int x) {
   return x * x;
@@ -329,8 +329,9 @@ int b = square2(2); // mov edi, 2
                     // call square2(int)
                     // mov DWORD PTR [rbp-8], eax
 ```
+In the previous snippet, notice that the computation when calling `square` is carried out at compile-time, and then the result is embedded in the code generation, while `square2` is called at run-time.
 
-`constexpr` values are those that the compiler can evaluate at compile-time:
+`constexpr` values are those that the compiler can evaluate, but are not guaranteed to, at compile-time:
 ```c++
 const int x = 123;
 constexpr const int& y = x; // error -- constexpr variable `y` must be initialized by a constant expression
@@ -619,23 +620,23 @@ struct Bar {
 };
 
 struct Foo {
-  Bar getBar() & { return bar; }
-  Bar getBar() const& { return bar; }
-  Bar getBar() && { return std::move(bar); }
+  Bar& getBar() & { return bar; }
+  const Bar& getBar() const& { return bar; }
+  Bar&& getBar() && { return std::move(bar); }
+  const Bar&& getBar() const&& { return std::move(bar); }
 private:
   Bar bar;
 };
 
 Foo foo{};
-Bar bar = foo.getBar(); // calls `Bar getBar() &`
+Bar bar = foo.getBar(); // calls `Bar& getBar() &`
 
 const Foo foo2{};
-Bar bar2 = foo2.getBar(); // calls `Bar Foo::getBar() const&`
+Bar bar2 = foo2.getBar(); // calls `Bar& Foo::getBar() const&`
 
-Foo{}.getBar(); // calls `Bar Foo::getBar() &&`
-std::move(foo).getBar(); // calls `Bar Foo::getBar() &&`
-
-std::move(foo2).getBar(); // calls `Bar Foo::getBar() const&&`
+Foo{}.getBar(); // calls `Bar&& Foo::getBar() &&`
+std::move(foo).getBar(); // calls `Bar&& Foo::getBar() &&`
+std::move(foo2).getBar(); // calls `const Bar&& Foo::getBar() const&`
 ```
 
 ### Trailing return types
@@ -1004,7 +1005,7 @@ int main ()
 
 ## Acknowledgements
 * [cppreference](http://en.cppreference.com/w/cpp) - especially useful for finding examples and documentation of new library features.
-* [C++ Rvalue References Explained](http://thbecker.net/articles/rvalue_references/section_01.html) - a great introduction I used to understand rvalue references, perfect forwarding, and move semantics.
+* [C++ Rvalue References Explained](http://web.archive.org/web/20240324121501/http://thbecker.net/articles/rvalue_references/section_01.html) - a great introduction I used to understand rvalue references, perfect forwarding, and move semantics.
 * [clang](http://clang.llvm.org/cxx_status.html) and [gcc](https://gcc.gnu.org/projects/cxx-status.html)'s standards support pages. Also included here are the proposals for language/library features that I used to help find a description of, what it's meant to fix, and some examples.
 * [Compiler explorer](https://godbolt.org/)
 * [Scott Meyers' Effective Modern C++](https://www.amazon.com/Effective-Modern-Specific-Ways-Improve/dp/1491903996) - highly recommended book!
